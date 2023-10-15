@@ -13,6 +13,7 @@ i = 0
 
 while True:
     if (io_module.is_on()):
+        io_module.on_led()
         #actionList.append(getActions02(get_ms()))
         #actionList.append(allActionList[getRandms(0, len(allActionList) - 1)](get_ms())) 
         actionList.append(allActionList[i](get_ms()))
@@ -39,6 +40,7 @@ while True:
             actionList = newActionList
             sleep(50)
             if (not io_module.is_on()):
+                io_module.off_led()
                 func_map["release_mouse_left"]()
                 func_map["release_mouse_right"]()
                 func_map["release_space"]()
