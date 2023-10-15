@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Logger</title>
+    <style>
+        #eventBox {
+            width: 640px;
+            height: 480px;
+            border: 1px solid black;
+            margin: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Event Logger</h1>
+    <button onclick="startLogging()">開始</button>
+    <button onclick="stopLogging()">結束</button>
+    <div id="eventBox"></div>
+
+    <script>
+        class EventLogger {
+            constructor() {
+                this.eventsArray = [];
+                this.hasStart = false;
+                this.pressedKeys = {};  // 新增：用於記錄當前按下的按鍵
+                this.eventBox = document.getElementById("eventBox");
+                this.initEventListeners();
+            }
+
+            start() {
+                this.hasStart = true;
+            }
+
+            stop() {
+                this.hasStart = false;
+                const filename = this.formatDateForFilename(new Date()) + '.json';
+                const blob = new Blob([JSON.stringify(this.eventsArray)], { type: "application/json" });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename;
+                a.click();
+            }
+            formatDateForFilename(date) {
+                const yyyy = date.getFullYear();
+                const MM = String(date.getMonth() + 1).padStart(2, '0');
+                const dd = String(date.getDate()).padStart(2, '0');
+                const hh = String(date.getHours()).padStart(2, '0');
+                const mm = String(date.getMinutes()).padStart(2, '0');
+                const ss = String(date.getSeconds()).padStart(2, '0');
+                const fff = String(date.getMilliseconds()).padStart(3, '0');
+                return `${yyyy}${MM}${dd}_${hh}${mm}${ss}_${fff}`;
+            }
+
+            isRecording(event) {
+                return this.hasStart && this.isMouseInBox(event);
+            }
+
+            isMouseInBox(event) {
+                const rect = this.eventBox.getBoundingClientRect();
+                return (
+                    event.clientX >= rect.left &&
+                    event.clientX <= rect.right &&
+                    event.clientY >= rect.top &&
+                    event.clientY <= rect.bottom
+                );
+            }
+
+            logEvent(eventName) {
+                const currentTime = new Date();
+                const formattedTime = currentTime.toISOString().replace('T', ' ').replace('Z', '').split('.')[0] + "." + String(currentTime.getMilliseconds()).padStart(3, '0');
+
+                const eventObject = {
+                    send_time: formattedTime,
+                    key: eventName
+                };
+                this.eventsArray.push(eventObject);
+                console.log(this.eventsArray);
+            }
+
+            initEventListeners() {
+                this.eventBox.addEventListener('contextmenu', e => {
+                    if (this.isRecording(e)) {
+                        e.preventDefault();
+                    }
+                });
+
+                this.eventBox.addEventListener('mousedown', e => {
+                    if (!this.isRecording(e)) return;
+
+                    if (e.button === 0) { // left button
+                        this.logEvent("mouse_left_press");
+                    } else if (e.button === 2) { // right button
+                        this.logEvent("mouse_right_press");
+                    }
+                });
+
+                this.eventBox.addEventListener('mouseup', e => {
+                    if (!this.isRecording(e)) return;
+
+                    if (e.button === 0) { // left button
+                        this.logEvent("mouse_left_release");
+                    } else if (e.button === 2) { // right button
+                        this.logEvent("mouse_right_release");
+                    }
+                });
+
+
+
+                document.addEventListener('keydown', e => {
+                    if (!this.hasStart) return;
+
+                    if (!this.pressedKeys[e.key]) {
+                        this.pressedKeys[e.key] = true;
+                        this.logEvent(e.key + "_press");
+                    }
+                });
+
+                document.addEventListener('keyup', e => {
+                    if (!this.hasStart) return;
+
+                    this.logEvent(e.key + "_release");
+                    delete this.pressedKeys[e.key];  // 從記錄的按下按鍵中移除
+                });
+            }
+        }
+
+        let logger;
+
+        function startLogging() {
+            logger = new EventLogger();
+            logger.start();
+        }
+
+        function stopLogging() {
+            if (logger) {
+                logger.stop();
+            }
+        }
+    </script>
+</body>
+
+</html>
